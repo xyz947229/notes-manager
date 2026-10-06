@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Study Resources, TXT/CSV Exports & FTP — Notes Manager{% endblock %}
+{% block page_heading %}Resources, TXT/CSV Exports &amp; FTP File Transfer{% endblock %}
+
+{% block content %}
+<!-- One-Click TXT & CSV Export Bar (Part 18 & Part 19) -->
+<section class="card" style="margin-bottom: 1.5rem;">
+  <div class="toolbar-row" style="margin-bottom: 0;">
+    <div>
+      <h3 class="card-title">TXT &amp; CSV Data Exports (Python Generators + <code>csv</code> Module)</h3>
+      <p class="card-subtitle">
+        Streamed lazily using Python <code>yield</code> generators in <code>FileManager</code> and archived automatically in your Resources list.
+      </p>
+    </div>
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+      <a href="{% url 'export_notes_txt' %}" class="btn btn-primary">Download notes.txt</a>
+      <a href="{% url 'export_csv' 'notes' %}" class="btn btn-rose">Download notes.csv</a>
+      <a href="{% url 'export_csv' 'quiz_results' %}" class="btn btn-outline">Download quiz_results.csv</a>
+      <a href="{% url 'export_csv' 'tasks' %}" class="btn btn-outline">Download tasks.csv</a>
+      <a href="{% url 'export_csv' 'progress' %}" class="btn btn-outline">Download progress.csv</a>
+    </div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <!-- Study Resources Library Table (Part 27) -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Study Resources Library</h3>
+        <p class="card-subtitle">View, filter, download, or delete PDFs, TXT files, and CSV exports</p>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" onclick="openModal('modal-upload-resource')">
+        + Upload Resource
+      </button>
+    </div>
+
+    <div class="tabs-bar">
+      <a href="{% url 'resources' %}?type=ALL" class="tab-btn {% if filter_type == 'ALL' %}active{% endif %}">All</a>
+      <a href="{% url 'resources' %}?type=PDF" class="tab-btn {% if filter_type == 'PDF' %}active{% endif %}">PDFs</a>
+      <a href="{% url 'resources' %}?type=TXT" class="tab-btn {% if filter_type == 'TXT' %}active{% endif %}">TXT Files</a>
+      <a href="{% url 'resources' %}?type=CSV" class="tab-btn {% if filter_type == 'CSV' %}active{% endif %}">CSV Files</a>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>File Type</th>
+            <th>File Size</th>
+            <th>Upload Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for res in resources %}
+          <tr>
+            <td>
+              <strong>{{ res.filename }}</strong>
+              <div style="font-size:0.76rem; color:var(--text-muted);">{{ res.title }} ({{ res.subject }})</div>
+            </td>
+            <td><span class="badge badge-subject">{{ res.file_type }}</span></td>
+            <td>{{ res.formatted_size }}</td>
+            <td>{{ res.uploaded_at|date:"M d, Y H:i" }}</td>
+            <td>
+              <div style="display:flex; gap:0.4rem;">
+                <a href="{% url 'download_resource' res.id %}" class="btn btn-sm btn-outline">Download</a>
+                <button type="button" class="btn btn-sm btn-outline" onclick="deleteResourceById({{ res.id }})">Delete</button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">No study resources found for this filter.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FTP Resource Transfer Section (Part 25: Python ftplib) -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">FTP Study Resource Transfer (<code>ftplib</code>)</h3>
+        <p class="card-subtitle">Mode: <strong>{{ ftp_info.mode }}</strong> &bull; Endpoint: <code>{{ ftp_info.endpoint }}</code></p>
+      </div>
+      <span class="badge {% if ftp_info.connected %}badge-covered{% else %}badge-pending{% endif %}">
+        {% if ftp_info.connected %}FTP Ready{% else %}FTP Offline{% endif %}
+      </span>
+    </div>
+
+    <!-- FTP Upload Form -->
+    <form onsubmit="handleFtpUpload(event)" style="padding:0.95rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm); margin-bottom:1.1rem;">
+      <label class="form-label" for="ftp-file-input">Upload Study Resource to FTP Repository (<code>STOR</code>)</label>
+      <div style="display:flex; gap:0.65rem; flex-wrap:wrap; align-items:center;">
+        <input type="file" id="ftp-file-input" name="file" accept=".pdf,.txt,.csv,.md,.json" class="form-control" style="flex:1;" required>
+        <button type="submit" id="ftp-upload-btn" class="btn btn-primary">FTP Upload</button>
+      </div>
+    </form>
+
+    <!-- FTP Remote / Local Directory Listing -->
+    <h4 style="font-size:0.92rem; color:var(--dark-burgundy); margin-bottom:0.5rem;">FTP Repository Files (<code>NLST / RETR</code>)</h4>
+    <div class="table-wrap" style="margin-bottom:1rem;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Size</th>
+            <th>Modified</th>
+            <th>Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in ftp_info.files %}
+          <tr>
+            <td><strong>{{ f.filename }}</strong></td>
+            <td>{{ f.formatted_size }}</td>
+            <td>{{ f.modified }}</td>
+            <td>
+              <a href="{% url 'api_ftp_download' f.filename %}" class="btn btn-sm btn-rose">FTP Download</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No files in FTP repository yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Recent FTP Transfer Status Logs -->
+    <h4 style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.4rem;">Recent FTP Transfer Status</h4>
+    <div style="display:flex; flex-direction:column; gap:0.4rem;">
+      {% for log in transfer_logs %}
+      <div style="font-size:0.8rem; padding:0.45rem 0.7rem; background:var(--bg-blush); border-radius:var(--radius-sm); display:flex; justify-content:space-between;">
+        <span><strong>{{ log.action }}</strong> — {{ log.details }}</span>
+        <span class="badge badge-covered">{{ log.status }}</span>
+      </div>
+      {% empty %}
+      <p class="card-subtitle">No recent FTP transfers recorded yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<!-- Modal: Upload Study Resource (<dialog closedby="any">) -->
+<dialog id="modal-upload-resource" class="app-modal" closedby="any" aria-labelledby="modal-res-heading">
+  <div class="card-header">
+    <h3 id="modal-res-heading" class="card-title">Upload Study Resource</h3>
+    <button type="button" class="btn btn-sm btn-outline" onclick="closeModal('modal-upload-resource')">&times;</button>
+  </div>
+  <form onsubmit="handleResourceUpload(event)">
+    <div class="form-group">
+      <label class="form-label" for="res-title-input">Resource Title</label>
+      <input type="text" id="res-title-input" class="form-control" placeholder="e.g., DBMS Normalization Cheat Sheet">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="res-subject-input">Subject</label>
+      <select id="res-subject-input" class="form-control">
+        {% for s in subjects_nav %}
+        <option value="{{ s.name }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="res-file-input">Select File (.pdf, .txt, .csv, .md, .json) *</label>
+      <input type="file" id="res-file-input" class="form-control" accept=".pdf,.txt,.csv,.md,.json" required>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('modal-upload-resource')">Cancel</button>
+      <button type="submit" class="btn btn-primary">Upload File</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function handleResourceUpload(event) {
+  event.preventDefault();
+  const fileInput = document.getElementById('res-file-input');
+  if (!fileInput.files || !fileInput.files.length) return;
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  formData.append('title', document.getElementById('res-title-input').value);
+  formData.append('subject', document.getElementById('res-subject-input').value);
+  try {
+    const res = await apiRequest('/api/resources/', 'POST', formData, true);
+    showToast(res.message);
+    closeModal('modal-upload-resource');
+    setTimeout(() => window.location.reload(), 500);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function handleFtpUpload(event) {
+  event.preventDefault();
+  const fileInput = document.getElementById('ftp-file-input');
+  if (!fileInput.files || !fileInput.files.length) return;
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  try {
+    const res = await apiRequest('/api/ftp/files/', 'POST', formData, true);
+    showToast(res.message);
+    setTimeout(() => window.location.reload(), 500);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+</script>
+{% endblock %}

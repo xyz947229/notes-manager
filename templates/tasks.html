@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Daily Tasks — Notes Manager{% endblock %}
+{% block page_heading %}Daily Study Tasks{% endblock %}
+
+{% block content %}
+<!-- Top Progress Banner ("3 of 5 tasks completed" per Part 11) -->
+<section class="card" style="margin-bottom: 1.5rem;">
+  <div class="toolbar-row" style="margin-bottom: 0.75rem;">
+    <div>
+      <h3 class="card-title" style="font-size:1.25rem; color:var(--dark-burgundy);">
+        {{ task_data.summary_text }}
+      </h3>
+      <p class="card-subtitle">
+        Tasks are prioritized automatically using a Python <code>lambda</code> key in <code>TaskManager.sort_tasks_by_priority()</code>.
+      </p>
+    </div>
+    <div style="display:flex; gap:0.65rem;">
+      <a href="{% url 'export_csv' 'tasks' %}" class="btn btn-outline">Export tasks.csv</a>
+      <button type="button" class="btn btn-primary" onclick="openCreateTaskModal()">+ Add Task</button>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; font-size:0.84rem; margin-bottom:0.35rem;">
+    <span>Task Completion Progress</span>
+    <strong>{{ task_data.progress_percentage }}%</strong>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" style="width: {{ task_data.progress_percentage }}%;"></div>
+  </div>
+</section>
+
+<!-- Three Sections: Today, Upcoming, Completed (Part 11) -->
+<div class="grid-3">
+  <!-- TODAY SECTION -->
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">Today ({{ task_data.today_tasks|length }})</h3>
+      <span class="badge badge-high">Due Today</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+      {% for task in task_data.today_tasks %}
+      <div style="padding:0.9rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+          <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer;">
+            <input type="checkbox" onchange="toggleTaskCompleted({{ task.id }}, this.checked)" style="margin-top:0.25rem; width:17px; height:17px; accent-color:var(--dark-burgundy);">
+            <div>
+              <div style="font-weight:700; color:var(--text-main);">{{ task.title }}</div>
+              {% if task.description %}
+              <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.2rem;">{{ task.description }}</div>
+              {% endif %}
+            </div>
+          </label>
+          <span class="badge {% if task.priority == 'High' %}badge-high{% elif task.priority == 'Medium' %}badge-medium{% else %}badge-low{% endif %}">
+            {{ task.priority }}
+          </span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding-top:0.55rem; border-top:1px solid var(--border-rose); font-size:0.78rem; color:var(--text-muted);">
+          <span>{{ task.subject }} &bull; Due {{ task.due_date|date:"Y-m-d" }}</span>
+          <div style="display:flex; gap:0.35rem;">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline"
+              data-id="{{ task.id }}"
+              data-title="{{ task.title|escape }}"
+              data-description="{{ task.description|escape }}"
+              data-subject="{{ task.subject|escape }}"
+              data-priority="{{ task.priority }}"
+              data-due="{{ task.due_date|date:'Y-m-d' }}"
+              data-completed="false"
+              onclick="openEditTaskModal(this)"
+            >Edit</button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="deleteTaskById({{ task.id }})">Delete</button>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="card-subtitle">All tasks due today are completed!</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- UPCOMING SECTION -->
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">Upcoming ({{ task_data.upcoming_tasks|length }})</h3>
+      <span class="badge badge-pending">Scheduled</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+      {% for task in task_data.upcoming_tasks %}
+      <div style="padding:0.9rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+          <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer;">
+            <input type="checkbox" onchange="toggleTaskCompleted({{ task.id }}, this.checked)" style="margin-top:0.25rem; width:17px; height:17px; accent-color:var(--dark-burgundy);">
+            <div>
+              <div style="font-weight:700; color:var(--text-main);">{{ task.title }}</div>
+              {% if task.description %}
+              <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.2rem;">{{ task.description }}</div>
+              {% endif %}
+            </div>
+          </label>
+          <span class="badge {% if task.priority == 'High' %}badge-high{% elif task.priority == 'Medium' %}badge-medium{% else %}badge-low{% endif %}">
+            {{ task.priority }}
+          </span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding-top:0.55rem; border-top:1px solid var(--border-rose); font-size:0.78rem; color:var(--text-muted);">
+          <span>{{ task.subject }} &bull; Due {{ task.due_date|date:"Y-m-d" }}</span>
+          <div style="display:flex; gap:0.35rem;">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline"
+              data-id="{{ task.id }}"
+              data-title="{{ task.title|escape }}"
+              data-description="{{ task.description|escape }}"
+              data-subject="{{ task.subject|escape }}"
+              data-priority="{{ task.priority }}"
+              data-due="{{ task.due_date|date:'Y-m-d' }}"
+              data-completed="false"
+              onclick="openEditTaskModal(this)"
+            >Edit</button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="deleteTaskById({{ task.id }})">Delete</button>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="card-subtitle">No upcoming tasks scheduled.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- COMPLETED SECTION -->
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">Completed ({{ task_data.completed_tasks|length }})</h3>
+      <span class="badge badge-covered">Finished</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+      {% for task in task_data.completed_tasks %}
+      <div style="padding:0.9rem; background:var(--bg-blush); border:1px solid var(--border-rose); border-radius:var(--radius-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+          <label style="display:flex; align-items:flex-start; gap:0.6rem; cursor:pointer;">
+            <input type="checkbox" checked onchange="toggleTaskCompleted({{ task.id }}, this.checked)" style="margin-top:0.25rem; width:17px; height:17px; accent-color:var(--dark-burgundy);">
+            <div>
+              <div style="font-weight:700; text-decoration:line-through; color:var(--text-muted);">{{ task.title }}</div>
+              {% if task.description %}
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.15rem;">{{ task.description }}</div>
+              {% endif %}
+            </div>
+          </label>
+          <span class="badge badge-low">{{ task.priority }}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; padding-top:0.55rem; border-top:1px solid var(--border-rose); font-size:0.78rem; color:var(--text-muted);">
+          <span>{{ task.subject }} &bull; Done</span>
+          <div style="display:flex; gap:0.35rem;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="toggleTaskCompleted({{ task.id }}, false)">Uncomplete</button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="deleteTaskById({{ task.id }})">Delete</button>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="card-subtitle">No tasks completed yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<!-- Modal: Add / Edit Task (<dialog closedby="any">) -->
+<dialog id="modal-task-form" class="app-modal" closedby="any" aria-labelledby="modal-task-heading">
+  <div class="card-header">
+    <h3 id="modal-task-heading" class="card-title">Add Study Task</h3>
+    <button type="button" class="btn btn-sm btn-outline" onclick="closeModal('modal-task-form')">&times;</button>
+  </div>
+  <form onsubmit="submitTaskForm(event)">
+    <input type="hidden" id="task-id-input" value="">
+    <div class="form-group">
+      <label class="form-label" for="task-title-input">Task Title *</label>
+      <input type="text" id="task-title-input" class="form-control" required placeholder="e.g., Revise SciPy Linear Regression for Viva">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="task-desc-input">Description</label>
+      <textarea id="task-desc-input" class="form-control" rows="3" placeholder="Optional study details or chapter references"></textarea>
+    </div>
+    <div class="grid-3" style="gap:0.75rem; margin-bottom:0;">
+      <div class="form-group">
+        <label class="form-label" for="task-subject-input">Subject</label>
+        <select id="task-subject-input" class="form-control">
+          {% for s in subjects_nav %}
+          <option value="{{ s.name }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="task-priority-input">Priority</label>
+        <select id="task-priority-input" class="form-control">
+          <option value="High">High</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="task-due-input">Due Date</label>
+        <input type="date" id="task-due-input" class="form-control" required value="{% now 'Y-m-d' %}">
+      </div>
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; gap:0.55rem;">
+      <input type="checkbox" id="task-completed-input" style="width:17px; height:17px; accent-color:var(--dark-burgundy);">
+      <label for="task-completed-input" style="font-size:0.88rem; font-weight:600;">Mark as Completed</label>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('modal-task-form')">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save Task</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openCreateTaskModal() {
+  document.getElementById('modal-task-heading').textContent = 'Add Study Task';
+  document.getElementById('task-id-input').value = '';
+  document.getElementById('task-title-input').value = '';
+  document.getElementById('task-desc-input').value = '';
+  document.getElementById('task-priority-input').value = 'Medium';
+  document.getElementById('task-completed-input').checked = false;
+  openModal('modal-task-form');
+}
+
+function openEditTaskModal(btn) {
+  document.getElementById('modal-task-heading').textContent = 'Edit Study Task';
+  document.getElementById('task-id-input').value = btn.getAttribute('data-id');
+  document.getElementById('task-title-input').value = btn.getAttribute('data-title');
+  document.getElementById('task-desc-input').value = btn.getAttribute('data-description');
+  document.getElementById('task-subject-input').value = btn.getAttribute('data-subject');
+  document.getElementById('task-priority-input').value = btn.getAttribute('data-priority');
+  document.getElementById('task-due-input').value = btn.getAttribute('data-due');
+  document.getElementById('task-completed-input').checked = btn.getAttribute('data-completed') === 'true';
+  openModal('modal-task-form');
+}
+
+async function submitTaskForm(event) {
+  event.preventDefault();
+  const taskId = document.getElementById('task-id-input').value.trim();
+  const payload = {
+    title: document.getElementById('task-title-input').value.trim(),
+    description: document.getElementById('task-desc-input').value.trim(),
+    subject: document.getElementById('task-subject-input').value,
+    priority: document.getElementById('task-priority-input').value,
+    due_date: document.getElementById('task-due-input').value,
+    completed: document.getElementById('task-completed-input').checked,
+  };
+  try {
+    if (taskId) {
+      await apiRequest(`/api/tasks/${taskId}/`, 'PUT', payload);
+      showToast('Task updated!');
+    } else {
+      await apiRequest('/api/tasks/', 'POST', payload);
+      showToast('Task added!');
+    }
+    closeModal('modal-task-form');
+    setTimeout(() => window.location.reload(), 450);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+</script>
+{% endblock %}

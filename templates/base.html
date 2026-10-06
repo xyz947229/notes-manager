@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}Notes Manager — Academic Study Suite{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <!-- Sidebar Navigation (Part 28) -->
+  <aside id="app-sidebar" class="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">NM</div>
+      <div class="brand-text">
+        <h1>Notes Manager</h1>
+        <span>Academic Study Suite</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Primary Navigation">
+      <div class="nav-section-label">Core Workspace</div>
+      <a href="{% url 'home' %}" class="nav-item {% if active_page == 'home' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="{% url 'notes' %}" class="nav-item {% if active_page == 'notes' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Notes</span>
+      </a>
+      <a href="{% url 'quiz' %}" class="nav-item {% if active_page == 'quiz' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Quiz</span>
+      </a>
+      <a href="{% url 'tasks' %}" class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Tasks</span>
+      </a>
+
+      <div class="nav-section-label">Intelligence & Graphs</div>
+      <a href="{% url 'progress' %}" class="nav-item {% if active_page == 'progress' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Progress</span>
+      </a>
+      <a href="{% url 'analytics' %}" class="nav-item {% if active_page == 'analytics' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Analytics</span>
+      </a>
+      <a href="{% url 'knowledge_map' %}" class="nav-item {% if active_page == 'knowledge_map' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span>Knowledge Map</span>
+      </a>
+
+      <div class="nav-section-label">Files & System</div>
+      <a href="{% url 'resources' %}" class="nav-item {% if active_page == 'resources' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Resources</span>
+      </a>
+      <a href="{% url 'settings' %}" class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <!-- Socket Programming Status Footer (Part 23) -->
+    <div class="sidebar-footer">
+      <div class="socket-pill">
+        <span><span class="status-dot"></span> Server: <strong>{{ socket_info.server|default:"Online" }}</strong></span>
+        <span>Socket: <strong>{{ socket_info.socket_service|default:"Connected" }}</strong></span>
+      </div>
+      <div style="display:flex; justify-content:space-between; opacity:0.82;">
+        <span>TCP {{ socket_info.server_endpoint }}</span>
+        <span>{{ socket_info.latency_ms }} ms</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Shell -->
+  <div class="app-main">
+    <header class="top-navbar">
+      <div class="navbar-left">
+        <button id="sidebar-toggle-btn" class="hamburger-btn" aria-label="Toggle Menu">
+          ☰
+        </button>
+        <h2 class="page-heading">{% block page_heading %}Dashboard{% endblock %}</h2>
+      </div>
+      <div class="navbar-right">
+        <a href="{% url 'progress' %}" class="streak-badge" title="Current Study Streak">
+          <span>Study Streak:</span>
+          <strong>{{ global_progress.current_streak }} Days</strong>
+        </a>
+        <a href="{% url 'progress' %}" class="overall-pill" title="Three-Pillar Overall Progress">
+          <span>Overall Progress:</span>
+          <strong>{{ global_progress.overall_progress }}%</strong>
+        </a>
+      </div>
+    </header>
+
+    <main class="page-container">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="{% static 'js/app.js' %}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

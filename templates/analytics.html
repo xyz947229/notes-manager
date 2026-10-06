@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Scientific Study Analytics — Notes Manager{% endblock %}
+{% block page_heading %}Study Analytics (NumPy, SciPy &amp; Matplotlib){% endblock %}
+
+{% block content %}
+<!-- Top Summary Cards from NumPy & SciPy -->
+<section class="grid-stats">
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">NumPy Mean Score</span>
+    <span class="stat-value">{{ numpy_analysis.mean_score }}%</span>
+    <span class="stat-meta">Median: {{ numpy_analysis.median_score }}% &bull; Std Dev: {{ numpy_analysis.std_dev_score }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">NumPy 90th Percentile</span>
+    <span class="stat-value">{{ numpy_analysis.percentile_90 }}%</span>
+    <span class="stat-meta">IQR: {{ numpy_analysis.percentile_25 }}% – {{ numpy_analysis.percentile_75 }}%</span>
+  </div>
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">SciPy Predicted Next Score</span>
+    <span class="stat-value">{{ scipy_analysis.predicted_next_score }}%</span>
+    <span class="stat-meta">Slope: {{ scipy_analysis.regression_slope }} ({{ scipy_analysis.trend_interpretation }})</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">SciPy Mastery Prob (&gt;75%)</span>
+    <span class="stat-value">{{ scipy_analysis.probability_above_75_pct }}%</span>
+    <span class="stat-meta">Via <code>scipy.stats.norm.cdf</code></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Total Study Time</span>
+    <span class="stat-value">{{ numpy_analysis.total_study_minutes }} min</span>
+    <span class="stat-meta">Avg {{ numpy_analysis.avg_daily_study_minutes }} min/day ({{ numpy_analysis.total_note_words }} note words)</span>
+  </div>
+</section>
+
+<!-- Matplotlib Charts Row (Part 16) -->
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Quiz Score Over Time &amp; SciPy Regression</h3>
+        <p class="card-subtitle">Generated on backend by <code>Matplotlib</code> + <code>scipy.stats.linregress</code></p>
+      </div>
+      <span class="badge badge-covered">Matplotlib</span>
+    </div>
+    <img src="{{ charts.quiz_trend_chart }}" alt="Quiz Score Over Time Chart" style="width:100%; height:auto; border-radius:var(--radius-sm);">
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Notes Completion by Subject</h3>
+        <p class="card-subtitle">Covered vs Pending notes rendered in Dusty Rose &amp; Dark Burgundy</p>
+      </div>
+      <span class="badge badge-covered">Matplotlib</span>
+    </div>
+    <img src="{{ charts.notes_coverage_chart }}" alt="Notes Coverage Chart" style="width:100%; height:auto; border-radius:var(--radius-sm);">
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Weekly Study Minutes &amp; Completed Actions</h3>
+        <p class="card-subtitle">Dual-axis Matplotlib chart of the past 7 days</p>
+      </div>
+      <span class="badge badge-covered">Matplotlib</span>
+    </div>
+    <img src="{{ charts.weekly_activity_chart }}" alt="Weekly Study Activity Chart" style="width:100%; height:auto; border-radius:var(--radius-sm);">
+  </section>
+
+  <!-- Detailed NumPy & SciPy Viva Breakdown -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">NumPy &amp; SciPy Numerical Engine Output</h3>
+        <p class="card-subtitle">Live array computations from <code>analytics/services.py</code></p>
+      </div>
+      <span class="badge badge-subject">NumPy + SciPy</span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <th>NumPy Quiz Score Array (<code>ndarray</code>)</th>
+            <td><code>{{ numpy_analysis.quiz_scores_array }}</code></td>
+          </tr>
+          <tr>
+            <th>NumPy Cumulative Moving Average</th>
+            <td><code>{{ numpy_analysis.moving_average_array }}</code></td>
+          </tr>
+          <tr>
+            <th>NumPy Variance &amp; Std Deviation</th>
+            <td>Variance: <strong>{{ numpy_analysis.variance_score }}</strong> &bull; Std Dev: <strong>{{ numpy_analysis.std_dev_score }}</strong></td>
+          </tr>
+          <tr>
+            <th>SciPy Linear Regression (<code>stats.linregress</code>)</th>
+            <td>Slope = <strong>{{ scipy_analysis.regression_slope }}</strong>, Intercept = <strong>{{ scipy_analysis.regression_intercept }}</strong>, r = <strong>{{ scipy_analysis.correlation_r }}</strong> (p = {{ scipy_analysis.p_value }})</td>
+          </tr>
+          <tr>
+            <th>SciPy Standardized Z-Scores (<code>stats.zscore</code>)</th>
+            <td><code>{{ scipy_analysis.z_scores }}</code></td>
+          </tr>
+          <tr>
+            <th>SciPy Study Efficiency Correlation (<code>stats.pearsonr</code>)</th>
+            <td>r = <strong>{{ scipy_analysis.study_efficiency_correlation }}</strong> (p = {{ scipy_analysis.study_efficiency_pvalue }})</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

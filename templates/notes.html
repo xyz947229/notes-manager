@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}Notes Management — Notes Manager{% endblock %}
+{% block page_heading %}Notes Management{% endblock %}
+
+{% block content %}
+<!-- Top Action Toolbar -->
+<div class="toolbar-row">
+  <div>
+    <h3 style="font-size:1.1rem; color:var(--dark-burgundy);">Subjects &amp; Study Notes</h3>
+    <p class="card-subtitle">Filter by subject, switch between Covered and Not Covered tabs, or sort using Python lambda functions.</p>
+  </div>
+  <div style="display:flex; gap:0.65rem; flex-wrap:wrap;">
+    <button type="button" class="btn btn-outline" onclick="openModal('modal-add-subject')">
+      + Add Subject
+    </button>
+    <a href="{% url 'export_notes_txt' %}{% if selected_subject != 'all' %}?subject={{ selected_subject }}{% endif %}" class="btn btn-outline">
+      Export notes.txt
+    </a>
+    <a href="{% url 'export_csv' 'notes' %}" class="btn btn-outline">
+      Export notes.csv
+    </a>
+    <button type="button" class="btn btn-primary" onclick="openCreateNoteModal()">
+      + Create Note
+    </button>
+  </div>
+</div>
+
+<!-- Subject Pills (Part 6: Python, DSA, DBMS, Computer Organization, Java, Mathematics, Other + Custom) -->
+<div class="subject-pills" role="navigation" aria-label="Subject Filter">
+  <a href="{% url 'notes' %}?subject=all&tab={{ selected_tab }}&sort={{ sort_by }}&q={{ search_query }}"
+     class="subject-pill {% if selected_subject == 'all' %}active{% endif %}">
+    <span>All Subjects</span>
+    <span class="badge badge-low">{{ global_progress.total_notes }}</span>
+  </a>
+  {% for subj in subjects %}
+  <a href="{% url 'notes' %}?subject={{ subj.name|urlencode }}&tab={{ selected_tab }}&sort={{ sort_by }}&q={{ search_query }}"
+     class="subject-pill {% if selected_subject|lower == subj.name|lower %}active{% endif %}">
+    <span>{{ subj.name }}</span>
+    <span class="badge badge-low">{{ subj.covered }}/{{ subj.total }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Covered / Not Covered / All Notes Tabs + Search & Lambda Sort Bar -->
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div class="toolbar-row" style="margin-bottom: 0;">
+    <!-- Tabs (Part 6: 1. Covered Notes, 2. Not Covered Notes, plus All Notes) -->
+    <div class="tabs-bar" style="margin-bottom: 0;">
+      <a href="{% url 'notes' %}?subject={{ selected_subject|urlencode }}&tab=all&sort={{ sort_by }}&q={{ search_query }}"
+         class="tab-btn {% if selected_tab == 'all' %}active{% endif %}">
+        All Notes ({{ total_filtered }})
+      </a>
+      <a href="{% url 'notes' %}?subject={{ selected_subject|urlencode }}&tab=covered&sort={{ sort_by }}&q={{ search_query }}"
+         class="tab-btn {% if selected_tab == 'covered' %}active{% endif %}">
+        Covered Notes ({{ covered_count }})
+      </a>
+      <a href="{% url 'notes' %}?subject={{ selected_subject|urlencode }}&tab=uncovered&sort={{ sort_by }}&q={{ search_query }}"
+         class="tab-btn {% if selected_tab == 'uncovered' %}active{% endif %}">
+        Not Covered Notes ({{ uncovered_count }})
+      </a>
+    </div>
+
+    <!-- Search & Lambda Sort Form -->
+    <form method="get" action="{% url 'notes' %}" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;">
+      <input type="hidden" name="subject" value="{{ selected_subject }}">
+      <input type="hidden" name="tab" value="{{ selected_tab }}">
+      <input
+        type="search"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="Search title, topic, or content..."
+        class="form-control"
+        style="width: 240px;"
+      >
+      <select name="sort" class="form-control" style="width: 205px;" onchange="this.form.submit()">
+        <option value="updated_desc" {% if sort_by == 'updated_desc' %}selected{% endif %}>Sort: Recently Updated</option>
+        <option value="title_asc" {% if sort_by == 'title_asc' %}selected{% endif %}>Sort: Title (A &rarr; Z Lambda)</option>
+        <option value="title_desc" {% if sort_by == 'title_desc' %}selected{% endif %}>Sort: Title (Z &rarr; A Lambda)</option>
+        <option value="date_newest" {% if sort_by == 'date_newest' %}selected{% endif %}>Sort: Date Created (Newest)</option>
+        <option value="date_oldest" {% if sort_by == 'date_oldest' %}selected{% endif %}>Sort: Date Created (Oldest)</option>
+        <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Sort: Uncovered First</option>
+        <option value="length_desc" {% if sort_by == 'length_desc' %}selected{% endif %}>Sort: Word Count</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Apply</button>
+    </form>
+  </div>
+</div>
+
+<!-- Notes Cards Grid -->
+{% if notes %}
+<div class="grid-2">
+  {% for note in notes %}
+  <article class="card card-interactive" style="display:flex; flex-direction:column; justify-content:space-between;">
+    <div>
+      <div class="card-header" style="margin-bottom:0.65rem;">
+        <div style="display:flex; gap:0.45rem; align-items:center; flex-wrap:wrap;">
+          <span class="badge badge-subject">{{ note.subject.name }}</span>
+          <span class="badge badge-low">{{ note.topic }}</span>
+        </div>
+        {% if note.covered %}
+        <span class="badge badge-covered">Covered</span>
+        {% else %}
+        <span class="badge badge-pending">Not Covered</span>
+        {% endif %}
+      </div>
+
+      <h4 style="font-size:1.15rem; font-weight:700; margin-bottom:0.45rem;">
+        <a href="{% url 'note_detail' note.id %}">{{ note.title }}</a>
+      </h4>
+
+      <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1rem; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+        {{ note.content }}
+      </p>
+    </div>
+
+    <div>
+      <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-muted); margin-bottom:0.65rem;">
+        <span>Created: {{ note.created_at|date:"M d, Y" }} &bull; Updated: {{ note.updated_at|date:"M d, H:i" }}</span>
+        <span>{{ note.word_count }} words</span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; padding-top:0.75rem; border-top:1px solid var(--border-rose);">
+        <a href="{% url 'note_detail' note.id %}" class="btn btn-sm btn-primary">
+          Read Note &rarr;
+        </a>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+          {% if note.covered %}
+          <button type="button" class="btn btn-sm btn-outline" onclick="toggleNoteCovered({{ note.id }}, false)">
+            Mark Not Covered
+          </button>
+          {% else %}
+          <button type="button" class="btn btn-sm btn-rose" onclick="toggleNoteCovered({{ note.id }}, true)">
+            Mark Covered
+          </button>
+          {% endif %}
+          <button
+            type="button"
+            class="btn btn-sm btn-outline"
+            data-id="{{ note.id }}"
+            data-title="{{ note.title|escape }}"
+            data-subject="{{ note.subject.name|escape }}"
+            data-topic="{{ note.topic|escape }}"
+            data-content="{{ note.content|escape }}"
+            data-covered="{{ note.covered|yesno:'true,false' }}"
+            onclick="openEditNoteModal(this)"
+          >
+            Edit
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="deleteNoteById({{ note.id }})">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:3rem 1.5rem;">
+  <h4 style="font-size:1.15rem; color:var(--dark-burgundy); margin-bottom:0.4rem;">No Matching Study Notes Found</h4>
+  <p class="card-subtitle" style="margin-bottom:1.2rem;">Try clearing your search filter or create a new study note for this subject.</p>
+  <button type="button" class="btn btn-primary" onclick="openCreateNoteModal()">+ Create First Note</button>
+</div>
+{% endif %}
+
+<!-- Modal: Create / Edit Note (<dialog closedby="any"> per modern-web-guidance) -->
+<dialog id="modal-note-form" class="app-modal" closedby="any" aria-labelledby="modal-note-title">
+  <div class="card-header">
+    <h3 id="modal-note-title" class="card-title">Create Study Note</h3>
+    <button type="button" class="btn btn-sm btn-outline" onclick="closeModal('modal-note-form')">&times;</button>
+  </div>
+  <form id="note-editor-form" onsubmit="submitNoteForm(event)">
+    <input type="hidden" id="note-id-input" value="">
+    <div class="form-group">
+      <label class="form-label" for="note-title-input">Note Title *</label>
+      <input type="text" id="note-title-input" class="form-control" required placeholder="e.g., Python Generators and yield">
+    </div>
+    <div class="grid-2" style="gap:0.85rem; margin-bottom:0;">
+      <div class="form-group">
+        <label class="form-label" for="note-subject-input">Subject *</label>
+        <input type="text" id="note-subject-input" list="subject-datalist" class="form-control" required value="{% if selected_subject != 'all' %}{{ selected_subject }}{% else %}Python{% endif %}">
+        <datalist id="subject-datalist">
+          {% for s in subjects %}
+          <option value="{{ s.name }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="note-topic-input">Topic (For Knowledge Map)</label>
+        <input type="text" id="note-topic-input" class="form-control" value="Core Concepts" placeholder="e.g., OOP, SQL, Graphs">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="note-content-input">Note Content *</label>
+      <textarea id="note-content-input" class="form-control" rows="6" required placeholder="Write structured academic notes here..."></textarea>
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; gap:0.55rem;">
+      <input type="checkbox" id="note-covered-input" style="width:17px; height:17px; accent-color:var(--dark-burgundy);">
+      <label for="note-covered-input" style="font-size:0.88rem; font-weight:600;">Mark this note as already Covered</label>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('modal-note-form')">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save Note</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Modal: Add Custom Subject -->
+<dialog id="modal-add-subject" class="app-modal" closedby="any" aria-labelledby="modal-subject-heading">
+  <div class="card-header">
+    <h3 id="modal-subject-heading" class="card-title">Add Custom Subject</h3>
+    <button type="button" class="btn btn-sm btn-outline" onclick="closeModal('modal-add-subject')">&times;</button>
+  </div>
+  <form onsubmit="submitCustomSubject(event)">
+    <div class="form-group">
+      <label class="form-label" for="custom-subject-name">Subject Name *</label>
+      <input type="text" id="custom-subject-name" class="form-control" required placeholder="e.g., Operating Systems, Machine Learning">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="custom-subject-desc">Description</label>
+      <input type="text" id="custom-subject-desc" class="form-control" placeholder="Short description of syllabus topics">
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('modal-add-subject')">Cancel</button>
+      <button type="submit" class="btn btn-primary">Add Subject</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openCreateNoteModal() {
+  document.getElementById('modal-note-title').textContent = 'Create Study Note';
+  document.getElementById('note-id-input').value = '';
+  document.getElementById('note-title-input').value = '';
+  document.getElementById('note-topic-input').value = 'Core Concepts';
+  document.getElementById('note-content-input').value = '';
+  document.getElementById('note-covered-input').checked = false;
+  openModal('modal-note-form');
+}
+
+function openEditNoteModal(btn) {
+  document.getElementById('modal-note-title').textContent = 'Edit Study Note';
+  document.getElementById('note-id-input').value = btn.getAttribute('data-id');
+  document.getElementById('note-title-input').value = btn.getAttribute('data-title');
+  document.getElementById('note-subject-input').value = btn.getAttribute('data-subject');
+  document.getElementById('note-topic-input').value = btn.getAttribute('data-topic');
+  document.getElementById('note-content-input').value = btn.getAttribute('data-content');
+  document.getElementById('note-covered-input').checked = btn.getAttribute('data-covered') === 'true';
+  openModal('modal-note-form');
+}
+
+async function submitNoteForm(event) {
+  event.preventDefault();
+  const noteId = document.getElementById('note-id-input').value.trim();
+  const payload = {
+    title: document.getElementById('note-title-input').value.trim(),
+    subject_name: document.getElementById('note-subject-input').value.trim(),
+    topic: document.getElementById('note-topic-input').value.trim(),
+    content: document.getElementById('note-content-input').value.trim(),
+    covered: document.getElementById('note-covered-input').checked,
+  };
+  try {
+    if (noteId) {
+      await apiRequest(`/api/notes/${noteId}/`, 'PUT', payload);
+      showToast('Note updated successfully!');
+    } else {
+      await apiRequest('/api/notes/', 'POST', payload);
+      showToast('Note created successfully!');
+    }
+    closeModal('modal-note-form');
+    setTimeout(() => window.location.reload(), 550);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+async function submitCustomSubject(event) {
+  event.preventDefault();
+  const name = document.getElementById('custom-subject-name').value.trim();
+  const description = document.getElementById('custom-subject-desc').value.trim();
+  try {
+    await apiRequest('/api/subjects/', 'POST', { name, description });
+    showToast(`Subject '${name}' added!`);
+    closeModal('modal-add-subject');
+    setTimeout(() => window.location.reload(), 500);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+</script>
+{% endblock %}
