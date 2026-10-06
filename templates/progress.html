@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Progress & Consistency Tracker — Notes Manager{% endblock %}
+{% block page_heading %}Progress &amp; Study Consistency Tracker{% endblock %}
+
+{% block content %}
+<!-- Overall Progress Hero Banner (Part 13) -->
+<section class="continue-banner" aria-label="Overall Progress Formula">
+  <div class="continue-info">
+    <span class="continue-tag">Three-Pillar Overall Progress</span>
+    <h3 class="continue-title">Overall Progress: {{ progress.overall_progress }}%</h3>
+    <p class="continue-subject">
+      Documented Formula: <code>{{ progress.formula }}</code> =
+      <code>({{ progress.notes_progress }}% + {{ progress.quiz_progress }}% + {{ progress.task_progress }}%) / 3</code>
+    </p>
+    <div style="max-width: 520px;">
+      <div class="progress-track on-dark">
+        <div class="progress-fill" style="width: {{ progress.overall_progress }}%;"></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <a href="{% url 'export_csv' 'progress' %}" class="btn btn-cream">
+      Download progress.csv
+    </a>
+  </div>
+</section>
+
+<!-- Three Major Progress Categories (Part 13) -->
+<div class="grid-3">
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">1. Notes Progress</h3>
+      <span class="badge badge-covered">{{ progress.notes_progress }}%</span>
+    </div>
+    <p class="card-subtitle" style="margin-bottom:0.85rem;">
+      {{ progress.covered_notes }} of {{ progress.total_notes }} notes marked as Covered ({{ progress.pending_notes }} pending)
+    </p>
+    <div class="progress-track">
+      <div class="progress-fill" style="width: {{ progress.notes_progress }}%;"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">2. Quiz Progress</h3>
+      <span class="badge badge-covered">{{ progress.quiz_progress }}%</span>
+    </div>
+    <p class="card-subtitle" style="margin-bottom:0.85rem;">
+      NumPy mean across {{ progress.completed_quizzes }} completed quizzes (Highest: {{ progress.highest_quiz_score }}%)
+    </p>
+    <div class="progress-track">
+      <div class="progress-fill" style="width: {{ progress.quiz_progress }}%;"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">3. Task Progress</h3>
+      <span class="badge badge-covered">{{ progress.task_progress }}%</span>
+    </div>
+    <p class="card-subtitle" style="margin-bottom:0.85rem;">
+      {{ progress.completed_tasks }} of {{ progress.total_tasks }} study tasks completed ({{ progress.pending_tasks }} pending)
+    </p>
+    <div class="progress-track">
+      <div class="progress-fill" style="width: {{ progress.task_progress }}%;"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Consistency Tracker Metrics (Part 12) -->
+<section class="grid-stats" aria-label="Consistency Metrics">
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">Current Streak</span>
+    <span class="stat-value">{{ consistency.current_streak }} Days</span>
+    <span class="stat-meta">Consecutive active study days</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Best Streak</span>
+    <span class="stat-value">{{ consistency.best_streak }} Days</span>
+    <span class="stat-meta">All-time record</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Total Study Days</span>
+    <span class="stat-value">{{ consistency.total_study_days }}</span>
+    <span class="stat-meta">Days logged in database</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Tasks Completed</span>
+    <span class="stat-value">{{ consistency.tasks_completed }}</span>
+    <span class="stat-meta">Verified task completions</span>
+  </div>
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">Weekly Consistency</span>
+    <span class="stat-value">{{ consistency.weekly_consistency }}%</span>
+    <span class="stat-meta">{{ consistency.active_days_this_week }}/7 days active ({{ consistency.weekly_study_minutes }} mins)</span>
+  </div>
+</section>
+
+<div class="grid-2">
+  <!-- 28-Day Study Consistency Calendar / Heatmap (Part 12) -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">28-Day Study Consistency Heatmap</h3>
+        <p class="card-subtitle">Built dynamically from database <code>StudyLog</code>, <code>Note</code>, <code>Quiz</code>, and <code>Task</code> timestamps</p>
+      </div>
+      <span class="badge badge-subject">Last 4 Weeks</span>
+    </div>
+
+    <div class="heatmap-grid">
+      {% for day in consistency.heatmap_days %}
+      <div class="heatmap-cell heatmap-level-{{ day.level }}" title="{{ day.date }}: {{ day.actions }} study actions ({{ day.study_minutes }} mins)">
+        <div style="font-weight:700;">{{ day.label }}</div>
+        <div style="font-size:0.68rem; opacity:0.88;">{{ day.weekday }} &bull; {{ day.actions }} act</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; font-size:0.78rem; color:var(--text-muted);">
+      <span>Intensity Legend:</span>
+      <div style="display:flex; gap:0.4rem; align-items:center;">
+        <span class="badge heatmap-level-0">0</span>
+        <span class="badge heatmap-level-1">1</span>
+        <span class="badge heatmap-level-2">2-3</span>
+        <span class="badge heatmap-level-3">4-5</span>
+        <span class="badge heatmap-level-4">6+ Actions</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Subject-by-Subject Progress + Send Progress Report via SMTP (Part 13 & Part 24) -->
+  <div style="display:flex; flex-direction:column; gap:1.4rem;">
+    <section class="card">
+      <div class="card-header">
+        <h3 class="card-title">Subject Coverage Breakdown</h3>
+        <a href="{% url 'notes' %}" class="btn btn-sm btn-outline">Open Notes</a>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.85rem;">
+        {% for item in progress.subject_breakdown %}
+        <div>
+          <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.25rem;">
+            <span><strong>{{ item.subject }}</strong> ({{ item.covered_notes }}/{{ item.total_notes }} notes)</span>
+            <strong>{{ item.progress_percentage }}%</strong>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width: {{ item.progress_percentage }}%;"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Send Progress Report via Python SMTP (Part 24) -->
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Send Progress Report (Python SMTP)</h3>
+          <p class="card-subtitle">Emails Notes, Quiz, Task, Overall Progress &amp; Study Streak using <code>smtplib</code></p>
+        </div>
+        <span class="badge badge-covered">SMTP</span>
+      </div>
+      <form onsubmit="submitProgressReportEmail(event)">
+        <div style="display:flex; gap:0.65rem; flex-wrap:wrap;">
+          <input
+            type="email"
+            name="email"
+            class="form-control"
+            style="flex:1; min-width:210px;"
+            required
+            placeholder="Enter recipient email (e.g., student@college.edu)"
+          >
+          <button type="submit" class="btn btn-primary">Send Progress Report</button>
+        </div>
+      </form>
+      <pre id="smtp-report-output" style="display:none; margin-top:0.9rem; padding:0.85rem; background:var(--bg-cream); border:1px solid var(--border-strong); border-radius:var(--radius-sm); font-size:0.78rem; white-space:pre-wrap; color:var(--text-main);"></pre>
+    </section>
+  </div>
+</div>
+{% endblock %}

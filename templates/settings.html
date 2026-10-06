@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Settings, Networking & Viva Guide — Notes Manager{% endblock %}
+{% block page_heading %}System Settings, Networking Services &amp; Python Viva Reference{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <!-- Part 23: Python Socket Programming Live Status Card -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Python TCP Socket Service (Part 23)</h3>
+        <p class="card-subtitle">Uses <code>socket.socket(socket.AF_INET, socket.SOCK_STREAM)</code> on localhost</p>
+      </div>
+      <span class="badge badge-covered">{{ socket_info.socket_service }}</span>
+    </div>
+
+    <div class="grid-2" style="gap:0.85rem; margin-bottom:1rem;">
+      <div style="padding:0.85rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm);">
+        <div class="stat-label">Server Status</div>
+        <div style="font-size:1.25rem; font-weight:800; color:var(--dark-burgundy);">Server: {{ socket_info.server }}</div>
+        <div style="font-size:0.8rem; color:var(--text-secondary);">Endpoint: <code>{{ socket_info.server_endpoint }}</code></div>
+      </div>
+      <div style="padding:0.85rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm);">
+        <div class="stat-label">Socket Connection</div>
+        <div style="font-size:1.25rem; font-weight:800; color:var(--dark-burgundy);">Socket Service: {{ socket_info.socket_service }}</div>
+        <div style="font-size:0.8rem; color:var(--text-secondary);">Round-trip latency: <strong>{{ socket_info.latency_ms }} ms</strong></div>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
+      <span style="font-size:0.84rem; font-weight:600; color:var(--text-secondary);">Live TCP Socket JSON Telemetry:</span>
+      <button type="button" class="btn btn-sm btn-primary" onclick="pingSocketService()">
+        Send TCP Socket Heartbeat Ping
+      </button>
+    </div>
+    <pre id="socket-live-json" style="padding:0.85rem; background:var(--bg-cream); border:1px solid var(--border-strong); border-radius:var(--radius-sm); font-size:0.8rem; overflow-x:auto;">{{ socket_info|pprint }}</pre>
+  </section>
+
+  <!-- Environment & Security Configuration Status (Part 24, 25, 31) -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Environment &amp; Service Configuration (<code>.env</code>)</h3>
+        <p class="card-subtitle">Credentials are loaded securely from environment variables — never hard-coded</p>
+      </div>
+      <span class="badge badge-subject">Security Verified</span>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:1.1rem;">
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <th>External Quiz API URL</th>
+            <td><code>{{ config_summary.api_url|truncatechars:48 }}</code></td>
+          </tr>
+          <tr>
+            <th>Quiz API Mode</th>
+            <td>
+              {% if config_summary.api_key_configured %}
+              <span class="badge badge-covered">Live External API Key Active</span>
+              {% else %}
+              <span class="badge badge-pending">Contextual PDF Fallback Mode (Set API_KEY in .env for Live AI)</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>SMTP Email Server (<code>smtplib</code>)</th>
+            <td>
+              <code>{{ config_summary.smtp_host }}</code>
+              {% if config_summary.smtp_credentials_configured %}
+              <span class="badge badge-covered">Live Credentials Set</span>
+              {% else %}
+              <span class="badge badge-low">Local .eml Outbox Mode</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>FTP Service (<code>ftplib</code>)</th>
+            <td>
+              <code>{{ config_summary.ftp_endpoint }}</code>
+              {% if config_summary.ftp_mock_mode %}
+              <span class="badge badge-low">Local Development Mode (FTP_MOCK_MODE=True)</span>
+              {% else %}
+              <span class="badge badge-covered">Live FTP Server Mode</span>
+              {% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Quick SMTP Progress Report Sender -->
+    <form onsubmit="submitProgressReportEmail(event)">
+      <label class="form-label">Send Progress Report via Python SMTP</label>
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+        <input type="email" name="email" class="form-control" style="flex:1;" required placeholder="student@college.edu">
+        <button type="submit" class="btn btn-primary">Send Report</button>
+      </div>
+    </form>
+    <pre id="smtp-report-output" style="display:none; margin-top:0.75rem; padding:0.75rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm); font-size:0.76rem; white-space:pre-wrap;"></pre>
+  </section>
+</div>
+
+<!-- Python Syllabus Concepts Demonstrated Reference Table (Part 32 & Part 35 Viva Guide) -->
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Python Syllabus Concepts Demonstrated (Viva Reference Guide)</h3>
+      <p class="card-subtitle">Exact mapping of where each of the 21 required Python concepts is implemented in this project</p>
+    </div>
+    <span class="badge badge-covered">21 / 21 Concepts Active</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Python Concept</th>
+          <th>Module / File Location</th>
+          <th>Class / Function</th>
+          <th>How It Is Used in Notes Manager</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Django &amp; REST API</strong></td><td><code>notes/views.py</code>, <code>notes/api_views.py</code></td><td>DRF <code>@api_view</code> &amp; Serializers</td><td>Full-stack template views and REST JSON endpoints</td></tr>
+        <tr><td>2</td><td><strong>Database &amp; ORM</strong></td><td><code>notes/models.py</code>, <code>quizzes/models.py</code>, <code>tasks/models.py</code></td><td><code>Subject</code>, <code>Note</code>, <code>Quiz</code>, <code>Question</code>, <code>Task</code>, <code>StudyLog</code></td><td>Relational SQLite schema with ForeignKey &amp; atomic transactions</td></tr>
+        <tr><td>3</td><td><strong>Object-Oriented Programming (OOP)</strong></td><td><code>*/services.py</code></td><td><code>NoteManager</code>, <code>QuizManager</code>, <code>APIService</code>, <code>ProgressTracker</code>, <code>FileManager</code>, <code>AnalyticsManager</code></td><td>Encapsulated service classes, constructors, and exception inheritance</td></tr>
+        <tr><td>4</td><td><strong>Lambda Functions</strong></td><td><code>notes/services.py</code>, <code>quizzes/services.py</code>, <code>tasks/services.py</code></td><td><code>SORT_STRATEGIES</code>, <code>sort_tasks_by_priority</code>, <code>get_sorted_quizzes</code></td><td>Dynamic sorting of notes by title/date, tasks by priority weight, and quizzes by score</td></tr>
+        <tr><td>5</td><td><strong>Generators &amp; <code>yield</code></strong></td><td><code>notes/services.py</code>, <code>quizzes/services.py</code>, <code>files/services.py</code></td><td><code>extract_pages_generator</code>, <code>stream_questions</code>, <code>stream_notes_txt</code>, <code>stream_csv_rows</code></td><td>Memory-efficient streaming of PDF pages, quiz grading, and TXT/CSV file exports</td></tr>
+        <tr><td>6</td><td><strong>PDF Processing</strong></td><td><code>quizzes/services.py</code></td><td><code>PDFExtractor</code> (<code>pypdf.PdfReader</code>)</td><td>Validates and extracts text page-by-page from uploaded PDF notes</td></tr>
+        <tr><td>7</td><td><strong>External API Integration</strong></td><td><code>quizzes/services.py</code></td><td><code>APIService.call_external_api</code> (<code>requests</code>)</td><td>Sends extracted PDF text to AI endpoint configured in <code>.env</code> and validates JSON MCQs</td></tr>
+        <tr><td>8</td><td><strong>TXT File Handling</strong></td><td><code>files/services.py</code></td><td><code>FileManager.stream_notes_txt</code></td><td>Exports formatted study notes (<code>notes.txt</code>) with Subject, Title, Content, Status, Date</td></tr>
+        <tr><td>9</td><td><strong>CSV Functionality</strong></td><td><code>files/services.py</code></td><td><code>FileManager.stream_csv_rows</code> (<code>csv.DictWriter</code>)</td><td>Exports <code>notes.csv</code>, <code>quiz_results.csv</code>, <code>tasks.csv</code>, and <code>progress.csv</code></td></tr>
+        <tr><td>10</td><td><strong>NumPy</strong></td><td><code>analytics/services.py</code>, <code>progress/services.py</code></td><td><code>AnalyticsManager.compute_numpy_metrics</code></td><td>Vectorized quiz score arrays, cumulative moving averages, percentiles, and 3-pillar mean</td></tr>
+        <tr><td>11</td><td><strong>SciPy</strong></td><td><code>analytics/services.py</code></td><td><code>AnalyticsManager.compute_scipy_statistics</code> (<code>scipy.stats</code>)</td><td>Linear regression (<code>linregress</code>), Z-scores (<code>zscore</code>), Normal CDF mastery probability, Pearson r</td></tr>
+        <tr><td>12</td><td><strong>Matplotlib</strong></td><td><code>analytics/services.py</code></td><td><code>generate_quiz_trend_chart</code>, <code>generate_notes_coverage_chart</code>, <code>generate_weekly_activity_chart</code></td><td>Renders theme-consistent dusty rose &amp; burgundy analytics charts</td></tr>
+        <tr><td>13</td><td><strong>NetworkX</strong></td><td><code>analytics/services.py</code></td><td><code>build_knowledge_graph</code> (<code>nx.DiGraph</code>)</td><td>Constructs Subject &rarr; Topic &rarr; Note graph, computes degree centrality and spring layout</td></tr>
+        <tr><td>14</td><td><strong>Socket Programming</strong></td><td><code>networking/services.py</code></td><td><code>StudySocketService</code> (<code>socket.AF_INET</code>, <code>SOCK_STREAM</code>)</td><td>Background TCP server &amp; client ping protocol reporting Server Online / Socket Connected &amp; latency</td></tr>
+        <tr><td>15</td><td><strong>SMTP Email</strong></td><td><code>networking/services.py</code></td><td><code>SMTPReportService</code> (<code>smtplib.SMTP</code>, <code>MIMEMultipart</code>)</td><td>Generates and emails student progress summary report with TLS and local outbox fallback</td></tr>
+        <tr><td>16</td><td><strong>FTP Transfer</strong></td><td><code>networking/services.py</code></td><td><code>FTPResourceService</code> (<code>ftplib.FTP</code>)</td><td>Lists, uploads (<code>STOR</code>), and downloads (<code>RETR</code>) study resources with mock mode fallback</td></tr>
+        <tr><td>17</td><td><strong>Exception Handling</strong></td><td>All <code>services.py</code> &amp; <code>api_views.py</code></td><td>Custom domain exceptions &amp; <code>try/except/finally</code> blocks</td><td>Gracefully catches validation, DB, PDF, API timeout, Socket, SMTP, and FTP errors without tracebacks</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

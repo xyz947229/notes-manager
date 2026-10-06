@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Notes Manager{% endblock %}
+{% block page_heading %}Student Study Dashboard{% endblock %}
+
+{% block content %}
+<!-- Continue Studying Hero Section (Part 5) -->
+{% if continue_note %}
+<section class="continue-banner" aria-label="Continue Studying">
+  <div class="continue-info">
+    <span class="continue-tag">Continue Studying</span>
+    <div class="continue-subject">
+      Current Subject: <strong>{{ continue_note.subject.name }}</strong> &bull; Topic: {{ continue_note.topic }}
+    </div>
+    <h3 class="continue-title">Current Note: {{ continue_note.title }}</h3>
+    <div style="max-width: 440px; margin-top: 0.75rem;">
+      <div style="display:flex; justify-content:space-between; font-size:0.84rem; margin-bottom:0.35rem;">
+        <span>Reading Progress</span>
+        <strong>{{ continue_note.reading_progress }}%</strong>
+      </div>
+      <div class="progress-track on-dark">
+        <div class="progress-fill" style="width: {{ continue_note.reading_progress }}%;"></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <a href="{% url 'note_detail' continue_note.id %}" class="btn btn-cream" style="padding: 0.85rem 1.5rem; font-size: 0.95rem;">
+      Continue Studying &rarr;
+    </a>
+  </div>
+</section>
+{% endif %}
+
+<!-- Dashboard Key Metrics Grid (Part 5) -->
+<section class="grid-stats" aria-label="Key Study Metrics">
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">Total Notes</span>
+    <span class="stat-value">{{ global_progress.total_notes }}</span>
+    <span class="stat-meta">Across {{ subjects_nav.count }} subjects</span>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Covered Notes</span>
+    <span class="stat-value">{{ global_progress.covered_notes }}</span>
+    <span class="stat-meta">{{ global_progress.notes_progress }}% syllabus covered</span>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Pending Notes</span>
+    <span class="stat-value">{{ global_progress.pending_notes }}</span>
+    <span class="stat-meta">Remaining to complete</span>
+  </div>
+
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">Average Quiz Score</span>
+    <span class="stat-value">{{ global_progress.average_quiz_score }}%</span>
+    <span class="stat-meta">{{ global_progress.completed_quizzes }} quizzes completed</span>
+  </div>
+
+  <div class="stat-card">
+    <span class="stat-label">Today's Tasks</span>
+    <span class="stat-value">{{ task_data.completed_count }} / {{ task_data.total_count }}</span>
+    <span class="stat-meta">{{ task_data.summary_text }}</span>
+  </div>
+
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">Overall Progress</span>
+    <span class="stat-value">{{ global_progress.overall_progress }}%</span>
+    <span class="stat-meta">Streak: <strong>{{ global_progress.current_streak }} days</strong> (Best: {{ global_progress.best_streak }})</span>
+  </div>
+</section>
+
+<!-- Main Dashboard Two-Column Area -->
+<div class="grid-2">
+  <!-- Today's Study Tasks Card -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Today's Study Tasks</h3>
+        <p class="card-subtitle">{{ task_data.summary_text }}</p>
+      </div>
+      <a href="{% url 'tasks' %}" class="btn btn-sm btn-outline">Manage Tasks</a>
+    </div>
+
+    <div class="progress-track" style="margin-bottom: 1.15rem;">
+      <div class="progress-fill" style="width: {{ task_data.progress_percentage }}%;"></div>
+    </div>
+
+    {% if task_data.all_tasks %}
+    <div style="display:flex; flex-direction:column; gap:0.65rem;">
+      {% for task in task_data.all_tasks|slice:":5" %}
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:0.7rem 0.85rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm);">
+        <label style="display:flex; align-items:center; gap:0.7rem; cursor:pointer; flex:1;">
+          <input
+            type="checkbox"
+            {% if task.completed %}checked{% endif %}
+            onchange="toggleTaskCompleted({{ task.id }}, this.checked)"
+            style="width:17px; height:17px; accent-color:var(--dark-burgundy);"
+          >
+          <div>
+            <div style="font-weight:600; {% if task.completed %}text-decoration:line-through; color:var(--text-muted);{% endif %}">
+              {{ task.title }}
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted);">
+              {{ task.subject }} &bull; Due {{ task.due_date|date:"M d, Y" }}
+            </div>
+          </div>
+        </label>
+        <span class="badge {% if task.priority == 'High' %}badge-high{% elif task.priority == 'Medium' %}badge-medium{% else %}badge-low{% endif %}">
+          {{ task.priority }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="card-subtitle">No tasks scheduled yet. Add a daily study task to stay on track.</p>
+    {% endif %}
+  </section>
+
+  <!-- Three-Pillar Progress & Networking Telemetry Card -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Three-Pillar Study Progress</h3>
+        <p class="card-subtitle">Formula: <code>(Notes + Quiz + Tasks) / 3</code></p>
+      </div>
+      <a href="{% url 'progress' %}" class="btn btn-sm btn-outline">Full Tracker</a>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.35rem;">
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:0.86rem; margin-bottom:0.3rem;">
+          <span>1. Notes Coverage Progress</span>
+          <strong>{{ global_progress.notes_progress }}%</strong>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: {{ global_progress.notes_progress }}%;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:0.86rem; margin-bottom:0.3rem;">
+          <span>2. Quiz Mastery Progress (NumPy Mean)</span>
+          <strong>{{ global_progress.quiz_progress }}%</strong>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: {{ global_progress.quiz_progress }}%;"></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:0.86rem; margin-bottom:0.3rem;">
+          <span>3. Daily Task Completion Progress</span>
+          <strong>{{ global_progress.task_progress }}%</strong>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: {{ global_progress.task_progress }}%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Socket Service Live Status Box (Part 23) -->
+    <div style="padding:0.9rem 1rem; background:var(--bg-blush); border:1px solid var(--border-strong); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+      <div>
+        <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; color:var(--dark-burgundy);">
+          Backend TCP Socket Service
+        </div>
+        <div style="font-size:0.88rem; color:var(--text-main);">
+          Server: <strong>{{ socket_info.server }}</strong> &bull; Socket Service: <strong>{{ socket_info.socket_service }}</strong> ({{ socket_info.latency_ms }} ms)
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" onclick="pingSocketService()">
+        Ping Socket
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- Recent Notes & Recent Quizzes -->
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">Recent Study Notes</h3>
+      <a href="{% url 'notes' %}" class="btn btn-sm btn-rose">View All Notes</a>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for note in recent_notes %}
+          <tr>
+            <td><strong>{{ note.title }}</strong></td>
+            <td><span class="badge badge-subject">{{ note.subject.name }}</span></td>
+            <td>
+              {% if note.covered %}
+              <span class="badge badge-covered">Covered</span>
+              {% else %}
+              <span class="badge badge-pending">Pending</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'note_detail' note.id %}" class="btn btn-sm btn-outline">Read</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No study notes found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h3 class="card-title">Recent Quiz Results</h3>
+      <a href="{% url 'quiz' %}" class="btn btn-sm btn-rose">Take a Quiz</a>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Quiz Title</th>
+            <th>Subject</th>
+            <th>Score</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for q in recent_quizzes %}
+          <tr>
+            <td><a href="{% url 'quiz' %}?take={{ q.id }}"><strong>{{ q.title }}</strong></a></td>
+            <td><span class="badge badge-subject">{{ q.subject }}</span></td>
+            <td>{{ q.score }} / {{ q.total_questions }}</td>
+            <td><span class="badge badge-covered">{{ q.percentage|floatformat:1 }}%</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No quizzes taken yet. Upload a PDF to start!</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

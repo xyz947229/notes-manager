@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ note.title }} — Note Reader{% endblock %}
+{% block page_heading %}Note Reading Experience{% endblock %}
+
+{% block content %}
+<!-- Top Breadcrumb & Subject Progress Bar (Part 7) -->
+<div class="card" style="margin-bottom: 1.4rem;">
+  <div class="toolbar-row" style="margin-bottom: 0.85rem;">
+    <div>
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem;">
+        <a href="{% url 'notes' %}?subject={{ note.subject.name|urlencode }}" class="badge badge-subject">
+          Subject: {{ note.subject.name }}
+        </a>
+        <span class="badge badge-low">Topic: {{ note.topic }}</span>
+        <span id="note-status-badge" class="badge {% if note.covered %}badge-covered{% else %}badge-pending{% endif %}">
+          {% if note.covered %}Covered{% else %}In Progress ({{ note.reading_progress }}%){% endif %}
+        </span>
+      </div>
+      <h2 style="font-size:1.55rem; font-weight:800; color:var(--dark-burgundy);">{{ note.title }}</h2>
+    </div>
+    <div style="display:flex; gap:0.6rem;">
+      {% if previous_note %}
+      <a href="{% url 'note_detail' previous_note.id %}" class="btn btn-outline">
+        &larr; Previous Note
+      </a>
+      {% endif %}
+      {% if next_note %}
+      <a href="{% url 'note_detail' next_note.id %}" class="btn btn-primary">
+        Next Note &rarr;
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Progress Indicator -->
+  <div>
+    <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:var(--text-secondary); margin-bottom:0.35rem;">
+      <span>{{ note.subject.name }} Subject Coverage Progress</span>
+      <strong id="subject-progress-text">{{ subject_progress }}% ({{ global_progress.notes_progress }}% Total Notes Progress)</strong>
+    </div>
+    <div class="progress-track">
+      <div id="reading-progress-bar" class="progress-fill" style="width: {{ note.reading_progress }}%;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Reading Content Area -->
+<article class="reading-article">
+  {% for para in paragraphs %}
+  <p>{{ para }}</p>
+  {% empty %}
+  <p>{{ note.content }}</p>
+  {% endfor %}
+
+  <!-- End of Note Completion Prompt (Exact Specification Part 7) -->
+  <div class="end-of-note-card" id="end-of-note-prompt">
+    <h3 style="font-size:1.22rem; font-weight:700; color:var(--dark-burgundy); margin-bottom:0.35rem;">
+      You've reached the end of this note.
+    </h3>
+    <p style="font-size:0.98rem; color:var(--text-secondary); margin-bottom:1.15rem;">
+      Do you want to mark this note as covered?
+    </p>
+    <div style="display:flex; justify-content:center; gap:0.85rem; flex-wrap:wrap;">
+      <button type="button" class="btn btn-primary" onclick="markCurrentNoteCovered(true)">
+        Mark as Covered
+      </button>
+      <button type="button" class="btn btn-cream" onclick="markCurrentNoteCovered(false)">
+        Not Yet
+      </button>
+    </div>
+  </div>
+</article>
+
+<!-- Bottom Previous / Next Navigation Bar -->
+<div class="toolbar-row" style="margin-top: 1.5rem;">
+  <div>
+    {% if previous_note %}
+    <a href="{% url 'note_detail' previous_note.id %}" class="btn btn-outline">
+      &larr; Previous: {{ previous_note.title|truncatechars:36 }}
+    </a>
+    {% else %}
+    <a href="{% url 'notes' %}" class="btn btn-outline">&larr; Back to Notes</a>
+    {% endif %}
+  </div>
+  <div>
+    {% if next_note %}
+    <a href="{% url 'note_detail' next_note.id %}" class="btn btn-primary">
+      Next: {{ next_note.title|truncatechars:36 }} &rarr;
+    </a>
+    {% else %}
+    <a href="{% url 'notes' %}?subject={{ note.subject.name|urlencode }}" class="btn btn-primary">
+      Finish {{ note.subject.name }} Notes &rarr;
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function markCurrentNoteCovered(isCovered) {
+  try {
+    const res = await apiRequest('/api/notes/{{ note.id }}/', 'PATCH', {
+      covered: isCovered,
+      reading_progress: isCovered ? 100 : 60,
+    });
+    const badge = document.getElementById('note-status-badge');
+    const bar = document.getElementById('reading-progress-bar');
+    if (isCovered) {
+      showToast('Success! Note marked as Covered and progress updated.');
+      if (badge) {
+        badge.className = 'badge badge-covered';
+        badge.textContent = 'Covered';
+      }
+      if (bar) bar.style.width = '100%';
+    } else {
+      showToast('Kept note as Not Covered for future revision.');
+      if (badge) {
+        badge.className = 'badge badge-pending';
+        badge.textContent = 'Not Covered';
+      }
+      if (bar) bar.style.width = '60%';
+    }
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+</script>
+{% endblock %}

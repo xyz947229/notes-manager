@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}NetworkX Knowledge Map — Notes Manager{% endblock %}
+{% block page_heading %}NetworkX Knowledge Map (Subjects &rarr; Topics &rarr; Notes){% endblock %}
+
+{% block content %}
+<!-- Graph Topology Metrics (Part 17) -->
+<section class="grid-stats">
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">Total Graph Nodes</span>
+    <span class="stat-value">{{ knowledge_map.total_nodes }}</span>
+    <span class="stat-meta">Subjects, Topics &amp; Notes</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Directed Edges</span>
+    <span class="stat-value">{{ knowledge_map.total_edges }}</span>
+    <span class="stat-meta"><code>nx.DiGraph</code> relationships</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Graph Density</span>
+    <span class="stat-value">{{ knowledge_map.density }}</span>
+    <span class="stat-meta">Via <code>nx.density()</code></span>
+  </div>
+  <div class="stat-card burgundy-accent">
+    <span class="stat-label">Connected Components</span>
+    <span class="stat-value">{{ knowledge_map.connected_components }}</span>
+    <span class="stat-meta">Unified Knowledge Hierarchy</span>
+  </div>
+</section>
+
+<!-- Interactive Canvas Visualization + Matplotlib NetworkX Graph -->
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Interactive NetworkX Force-Directed Graph</h3>
+        <p class="card-subtitle">Click any Note node to open it in the Note Reader. Layout computed via <code>nx.spring_layout</code>.</p>
+      </div>
+      <span class="badge badge-covered">Interactive Canvas</span>
+    </div>
+    <canvas
+      id="knowledge-map-canvas"
+      width="620"
+      height="390"
+      style="width:100%; height:390px; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm); cursor:pointer;"
+    ></canvas>
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:0.75rem; font-size:0.8rem; color:var(--text-secondary);">
+      <span><strong style="color:#853737;">●</strong> Hub / Subject Node</span>
+      <span><strong style="color:#B26766;">●</strong> Topic Node</span>
+      <span><strong style="color:#C17876;">●</strong> Covered Note</span>
+      <span><strong style="color:#E6C8C7;">●</strong> Pending Note</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Backend Matplotlib + NetworkX Graph Plot</h3>
+        <p class="card-subtitle">Rendered via <code>nx.draw_networkx_nodes</code> &amp; <code>nx.draw_networkx_edges</code></p>
+      </div>
+      <span class="badge badge-subject">nx.DiGraph</span>
+    </div>
+    <img src="{{ knowledge_map_chart }}" alt="NetworkX Knowledge Map" style="width:100%; height:auto; border-radius:var(--radius-sm);">
+
+    <!-- Centrality Top Hubs -->
+    <div style="margin-top:1rem;">
+      <h4 style="font-size:0.9rem; color:var(--dark-burgundy); margin-bottom:0.45rem;">
+        Top Centrality Hubs (<code>nx.degree_centrality</code>)
+      </h4>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        {% for hub in knowledge_map.top_hubs %}
+        <span class="badge badge-low">
+          {{ hub.label }} (Centrality: {{ hub.centrality }}, Degree: {{ hub.degree }})
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Hierarchical Subject -> Topic -> Note Tree Cards (Part 17) -->
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Hierarchical Knowledge Tree (Subjects &rarr; Topics &rarr; Notes)</h3>
+      <p class="card-subtitle">Structured hierarchy representation of your academic syllabus</p>
+    </div>
+    <a href="{% url 'notes' %}" class="btn btn-sm btn-primary">Manage Notes</a>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:0;">
+    {% for tree in knowledge_map.subject_trees %}
+    <div style="padding:1.1rem; background:var(--bg-cream); border:1px solid var(--border-rose); border-radius:var(--radius-sm);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
+        <h4 style="font-size:1.05rem; font-weight:800; color:var(--dark-burgundy);">{{ tree.subject }}</h4>
+        <span class="badge badge-covered">{{ tree.covered_notes }}/{{ tree.total_notes }} Covered</span>
+      </div>
+      {% for t_item in tree.topics %}
+      <div style="margin-left:0.5rem; margin-bottom:0.65rem; padding-left:0.75rem; border-left:2px solid var(--primary-rose);">
+        <div style="font-size:0.84rem; font-weight:700; color:var(--dark-secondary); margin-bottom:0.25rem;">
+          ├── {{ t_item.topic }}
+        </div>
+        {% for n in t_item.notes %}
+        <div style="font-size:0.82rem; margin-left:0.6rem; margin-bottom:0.2rem;">
+          └── <a href="{% url 'note_detail' n.id %}">{{ n.title }}</a>
+          {% if n.covered %}
+          <span style="color:var(--dark-burgundy); font-weight:700;">(✓)</span>
+          {% else %}
+          <span style="color:var(--text-muted);">(Pending)</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const KM_DATA = {{ knowledge_map_json|safe }};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('knowledge-map-canvas');
+  if (!canvas || !KM_DATA || !KM_DATA.nodes) return;
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  const pad = 48;
+
+  const nodesMap = {};
+  KM_DATA.nodes.forEach((n) => {
+    const px = pad + ((n.x + 1) / 2) * (width - pad * 2);
+    const py = pad + ((n.y + 1) / 2) * (height - pad * 2);
+    nodesMap[n.id] = { ...n, px, py };
+  });
+
+  function drawGraph() {
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw edges
+    ctx.strokeStyle = '#B26766';
+    ctx.lineWidth = 1.4;
+    (KM_DATA.edges || []).forEach((e) => {
+      const s = nodesMap[e.source];
+      const t = nodesMap[e.target];
+      if (!s || !t) return;
+      ctx.beginPath();
+      ctx.moveTo(s.px, s.py);
+      ctx.lineTo(t.px, t.py);
+      ctx.stroke();
+    });
+
+    // Draw nodes
+    Object.values(nodesMap).forEach((n) => {
+      const radius = n.type === 'root' ? 14 : n.type === 'subject' ? 11 : n.type === 'topic' ? 8 : 6.5;
+      ctx.beginPath();
+      ctx.arc(n.px, n.py, radius, 0, Math.PI * 2);
+      ctx.fillStyle = n.color || '#C17876';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#853737';
+      ctx.stroke();
+
+      ctx.fillStyle = '#2F1717';
+      ctx.font = n.type === 'subject' || n.type === 'root' ? 'bold 11px Inter, sans-serif' : '10px Inter, sans-serif';
+      const label = n.label.length > 22 ? n.label.slice(0, 20) + '..' : n.label;
+      ctx.fillText(label, n.px + radius + 4, n.py + 3);
+    });
+  }
+
+  drawGraph();
+
+  canvas.addEventListener('click', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clickX = (event.clientX - rect.left) * scaleX;
+    const clickY = (event.clientY - rect.top) * scaleY;
+
+    for (const n of Object.values(nodesMap)) {
+      const dist = Math.hypot(clickX - n.px, clickY - n.py);
+      if (dist <= 14) {
+        if (n.note_id) {
+          window.location.href = `/notes/${n.note_id}/`;
+        } else if (n.type === 'subject') {
+          window.location.href = `/notes/?subject=${encodeURIComponent(n.label)}`;
+        } else {
+          showToast(`${n.type.toUpperCase()}: ${n.label} (Degree Centrality: ${n.centrality})`);
+        }
+        break;
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

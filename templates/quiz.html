@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% block title %}Notes Quiz & PDF Generator — Notes Manager{% endblock %}
+{% block page_heading %}Notes Quiz &amp; PDF Question Generator{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <!-- Left Column: PDF Drag-and-Drop Upload Area (Part 9 & Part 10) -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Upload Study PDF for AI Quiz Generation</h3>
+        <p class="card-subtitle">
+          Extracts text via <code>PDFExtractor</code> generator &rarr; calls <code>APIService</code> &rarr; saves validated MCQs.
+        </p>
+      </div>
+      <span class="badge {% if api_configured %}badge-covered{% else %}badge-low{% endif %}">
+        {% if api_configured %}External API Active{% else %}Contextual NLP Ready{% endif %}
+      </span>
+    </div>
+
+    <form id="pdf-quiz-form" onsubmit="handlePdfQuizUpload(event)">
+      <div
+        id="pdf-dropzone"
+        class="dropzone"
+        onclick="document.getElementById('pdf-file-input').click()"
+        ondragover="event.preventDefault(); this.classList.add('dragover');"
+        ondragleave="this.classList.remove('dragover');"
+        ondrop="handleFileDrop(event)"
+      >
+        <div class="dropzone-icon">PDF</div>
+        <h4 style="font-size:1.08rem; font-weight:700; color:var(--dark-burgundy); margin-bottom:0.3rem;">
+          Drop your PDF here or browse files.
+        </h4>
+        <p id="selected-pdf-label" class="card-subtitle">
+          Supports searchable academic PDF notes up to 15 MB
+        </p>
+        <input
+          type="file"
+          id="pdf-file-input"
+          name="pdf_file"
+          accept=".pdf,application/pdf"
+          style="display:none;"
+          onchange="updateSelectedFileName(this)"
+        >
+      </div>
+
+      <div class="grid-2" style="gap:0.85rem; margin-top:1.1rem; margin-bottom:0;">
+        <div class="form-group">
+          <label class="form-label" for="quiz-subject-select">Subject</label>
+          <select id="quiz-subject-select" name="subject" class="form-control">
+            {% for s in subjects_nav %}
+            <option value="{{ s.name }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="quiz-num-questions">Number of Questions</label>
+          <select id="quiz-num-questions" name="num_questions" class="form-control">
+            <option value="5" selected>5 Questions</option>
+            <option value="8">8 Questions</option>
+            <option value="10">10 Questions</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="quiz-custom-title">Optional Quiz Title</label>
+        <input type="text" id="quiz-custom-title" name="title" class="form-control" placeholder="Leave blank to auto-name from PDF filename">
+      </div>
+
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <button type="submit" id="generate-quiz-btn" class="btn btn-primary" style="flex:1;">
+          Generate Quiz from Uploaded PDF
+        </button>
+        <button type="button" class="btn btn-outline" onclick="generateSamplePdfQuiz()">
+          Try Instant Sample PDF
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Right Column: Interactive Question Interface (Part 9) -->
+  <section class="card" id="quiz-runner-card">
+    {% if active_quiz %}
+    <div class="card-header">
+      <div>
+        <span class="badge badge-subject">{{ active_quiz.subject }}</span>
+        <h3 class="card-title" id="runner-quiz-title" style="margin-top:0.25rem;">{{ active_quiz.title }}</h3>
+      </div>
+      <div style="text-align:right;">
+        <div class="badge badge-pending" id="question-counter-badge">Question 1 of {{ active_quiz.total_questions }}</div>
+        <div style="font-size:0.76rem; color:var(--text-muted); margin-top:0.25rem;" id="quiz-timer-display">Time: 00:00</div>
+      </div>
+    </div>
+
+    <!-- Interactive Question Stepper -->
+    <div id="question-stage">
+      <p id="question-text" style="font-size:1.05rem; font-weight:600; color:var(--text-main); margin-bottom:1.1rem; min-height:3rem;"></p>
+
+      <div id="options-container">
+        <button type="button" class="quiz-option" data-opt="A" onclick="selectOption('A')">
+          <span class="option-letter">A</span>
+          <span id="opt-text-A"></span>
+        </button>
+        <button type="button" class="quiz-option" data-opt="B" onclick="selectOption('B')">
+          <span class="option-letter">B</span>
+          <span id="opt-text-B"></span>
+        </button>
+        <button type="button" class="quiz-option" data-opt="C" onclick="selectOption('C')">
+          <span class="option-letter">C</span>
+          <span id="opt-text-C"></span>
+        </button>
+        <button type="button" class="quiz-option" data-opt="D" onclick="selectOption('D')">
+          <span class="option-letter">D</span>
+          <span id="opt-text-D"></span>
+        </button>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--border-rose);">
+        <button type="button" id="prev-q-btn" class="btn btn-outline" onclick="stepQuestion(-1)">
+          &larr; Previous
+        </button>
+        <div style="display:flex; gap:0.6rem;">
+          <button type="button" id="next-q-btn" class="btn btn-rose" onclick="stepQuestion(1)">
+            Next &rarr;
+          </button>
+          <button type="button" id="submit-quiz-btn" class="btn btn-primary" onclick="submitActiveQuiz()">
+            Submit Quiz
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submission Results Panel (Hidden until submitted) -->
+    <div id="quiz-results-panel" style="display:none; margin-top:1rem; padding-top:1rem; border-top:2px solid var(--border-strong);">
+      <h4 style="font-size:1.15rem; color:var(--dark-burgundy); margin-bottom:0.75rem;">Quiz Evaluation Summary</h4>
+      <div class="grid-3" style="margin-bottom:1rem; gap:0.75rem;">
+        <div style="padding:0.8rem; background:var(--bg-blush); border-radius:var(--radius-sm); text-align:center;">
+          <div class="stat-label">Score</div>
+          <div style="font-size:1.35rem; font-weight:800; color:var(--dark-burgundy);" id="res-score">0/0</div>
+        </div>
+        <div style="padding:0.8rem; background:var(--bg-blush); border-radius:var(--radius-sm); text-align:center;">
+          <div class="stat-label">Percentage</div>
+          <div style="font-size:1.35rem; font-weight:800; color:var(--dark-burgundy);" id="res-pct">0%</div>
+        </div>
+        <div style="padding:0.8rem; background:var(--bg-blush); border-radius:var(--radius-sm); text-align:center;">
+          <div class="stat-label">Correct / Wrong</div>
+          <div style="font-size:1.15rem; font-weight:700; color:var(--dark-burgundy);" id="res-breakdown">0 / 0</div>
+        </div>
+      </div>
+      <div id="res-review-list" style="display:flex; flex-direction:column; gap:0.55rem; max-height:260px; overflow-y:auto;"></div>
+    </div>
+    {% else %}
+    <p class="card-subtitle">Upload a PDF document on the left to generate your first interactive quiz.</p>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Quiz History Table Sorted with Lambda Functions -->
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Quiz History &amp; Performance Log</h3>
+      <p class="card-subtitle">Sorted dynamically using Python <code>lambda</code> functions in <code>QuizManager.get_sorted_quizzes()</code></p>
+    </div>
+    <div style="display:flex; gap:0.6rem; align-items:center;">
+      <a href="{% url 'export_csv' 'quiz_results' %}" class="btn btn-sm btn-outline">Export quiz_results.csv</a>
+      <form method="get" action="{% url 'quiz' %}">
+        <select name="sort" class="form-control" style="padding:0.38rem 0.7rem; font-size:0.82rem;" onchange="this.form.submit()">
+          <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Sort: Newest First</option>
+          <option value="score_desc" {% if sort_by == 'score_desc' %}selected{% endif %}>Sort: Highest Score (Lambda)</option>
+          <option value="score_asc" {% if sort_by == 'score_asc' %}selected{% endif %}>Sort: Lowest Score (Lambda)</option>
+          <option value="title_asc" {% if sort_by == 'title_asc' %}selected{% endif %}>Sort: Title A-Z (Lambda)</option>
+        </select>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Quiz Title</th>
+          <th>Subject</th>
+          <th>Source PDF</th>
+          <th>Correct</th>
+          <th>Incorrect</th>
+          <th>Score</th>
+          <th>Percentage</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in quizzes %}
+        <tr>
+          <td><strong>{{ q.title }}</strong></td>
+          <td><span class="badge badge-subject">{{ q.subject }}</span></td>
+          <td>{{ q.source_pdf_name|default:"—" }}</td>
+          <td>{{ q.correct_answers }}</td>
+          <td>{{ q.incorrect_answers }}</td>
+          <td><strong>{{ q.score }} / {{ q.total_questions }}</strong></td>
+          <td><span class="badge badge-covered">{{ q.percentage|floatformat:1 }}%</span></td>
+          <td>{{ q.created_at|date:"M d, Y H:i" }}</td>
+          <td>
+            <a href="{% url 'quiz' %}?take={{ q.id }}" class="btn btn-sm btn-outline">Practice</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9">No quizzes generated yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const ACTIVE_QUIZ_ID = {{ active_quiz.id|default:"null" }};
+const QUIZ_QUESTIONS = {{ active_questions_json|safe }};
+let currentIdx = 0;
+const userSelections = {};
+let elapsedSeconds = 0;
+
+function renderQuestion(idx) {
+  if (!QUIZ_QUESTIONS.length) return;
+  currentIdx = Math.max(0, Math.min(QUIZ_QUESTIONS.length - 1, idx));
+  const q = QUIZ_QUESTIONS[currentIdx];
+  document.getElementById('question-counter-badge').textContent = `Question ${currentIdx + 1} of ${QUIZ_QUESTIONS.length}`;
+  document.getElementById('question-text').textContent = `${q.question_number}. ${q.question}`;
+  document.getElementById('opt-text-A').textContent = q.option_a;
+  document.getElementById('opt-text-B').textContent = q.option_b;
+  document.getElementById('opt-text-C').textContent = q.option_c;
+  document.getElementById('opt-text-D').textContent = q.option_d;
+
+  const chosen = userSelections[q.id] || '';
+  document.querySelectorAll('.quiz-option').forEach((btn) => {
+    btn.classList.toggle('selected', btn.getAttribute('data-opt') === chosen);
+  });
+
+  document.getElementById('prev-q-btn').disabled = currentIdx === 0;
+  document.getElementById('next-q-btn').disabled = currentIdx === QUIZ_QUESTIONS.length - 1;
+}
+
+function selectOption(letter) {
+  if (!QUIZ_QUESTIONS.length) return;
+  const q = QUIZ_QUESTIONS[currentIdx];
+  userSelections[q.id] = letter;
+  renderQuestion(currentIdx);
+}
+
+function stepQuestion(delta) {
+  renderQuestion(currentIdx + delta);
+}
+
+async function submitActiveQuiz() {
+  if (!ACTIVE_QUIZ_ID) return;
+  try {
+    const res = await apiRequest('/api/quiz/submit/', 'POST', {
+      quiz_id: ACTIVE_QUIZ_ID,
+      answers: userSelections,
+      time_taken_seconds: elapsedSeconds,
+    });
+    showToast(res.message);
+    const r = res.result;
+    document.getElementById('quiz-results-panel').style.display = 'block';
+    document.getElementById('res-score').textContent = `${r.score} / ${r.total_questions}`;
+    document.getElementById('res-pct').textContent = `${r.percentage}%`;
+    document.getElementById('res-breakdown').textContent = `${r.correct_answers} Correct / ${r.incorrect_answers} Wrong`;
+
+    const reviewList = document.getElementById('res-review-list');
+    reviewList.innerHTML = '';
+    (r.review || []).forEach((item) => {
+      const div = document.createElement('div');
+      div.style.padding = '0.65rem 0.85rem';
+      div.style.borderRadius = '8px';
+      div.style.border = '1px solid var(--border-rose)';
+      div.style.background = item.is_correct ? 'var(--bg-cream)' : 'var(--bg-blush)';
+      div.innerHTML = `
+        <div style="font-weight:700; font-size:0.86rem;">
+          Q${item.question_number}: ${item.is_correct ? '✓ Correct' : '✗ Incorrect'} (Your Answer: ${item.user_answer} | Correct: ${item.correct_answer})
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.2rem;">${item.explanation || ''}</div>
+      `;
+      reviewList.appendChild(div);
+    });
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+function updateSelectedFileName(input) {
+  const label = document.getElementById('selected-pdf-label');
+  if (input.files && input.files.length > 0) {
+    label.textContent = `Selected: ${input.files[0].name} (${(input.files[0].size / 1024).toFixed(1)} KB)`;
+  }
+}
+
+function handleFileDrop(event) {
+  event.preventDefault();
+  document.getElementById('pdf-dropzone').classList.remove('dragover');
+  const fileInput = document.getElementById('pdf-file-input');
+  if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+    fileInput.files = event.dataTransfer.files;
+    updateSelectedFileName(fileInput);
+  }
+}
+
+async function handlePdfQuizUpload(event) {
+  event.preventDefault();
+  const fileInput = document.getElementById('pdf-file-input');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showToast('Please select or drop a .pdf file first, or click "Try Instant Sample PDF".', true);
+    return;
+  }
+  const formData = new FormData();
+  formData.append('pdf_file', fileInput.files[0]);
+  formData.append('subject', document.getElementById('quiz-subject-select').value);
+  formData.append('num_questions', document.getElementById('quiz-num-questions').value);
+  formData.append('title', document.getElementById('quiz-custom-title').value);
+
+  const btn = document.getElementById('generate-quiz-btn');
+  try {
+    btn.disabled = true;
+    btn.textContent = 'Extracting PDF & Generating Questions...';
+    const res = await apiRequest('/api/quiz/generate/', 'POST', formData, true);
+    showToast(res.message);
+    setTimeout(() => {
+      window.location.href = `/quiz/?take=${res.quiz.id}`;
+    }, 600);
+  } catch (err) {
+    showToast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Quiz from Uploaded PDF';
+  }
+}
+
+async function generateSamplePdfQuiz() {
+  try {
+    const subject = document.getElementById('quiz-subject-select').value;
+    const numQ = document.getElementById('quiz-num-questions').value;
+    const res = await apiRequest('/api/quiz/generate/', 'POST', {
+      use_sample_pdf: true,
+      subject: subject,
+      num_questions: numQ,
+      title: document.getElementById('quiz-custom-title').value,
+    });
+    showToast(res.message);
+    setTimeout(() => {
+      window.location.href = `/quiz/?take=${res.quiz.id}`;
+    }, 550);
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (QUIZ_QUESTIONS.length > 0) {
+    renderQuestion(0);
+    setInterval(() => {
+      elapsedSeconds += 1;
+      const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+      const secs = String(elapsedSeconds % 60).padStart(2, '0');
+      const timerEl = document.getElementById('quiz-timer-display');
+      if (timerEl) timerEl.textContent = `Time: ${mins}:${secs}`;
+    }, 1000);
+  }
+});
+</script>
+{% endblock %}
